@@ -66,3 +66,18 @@ PanVK release: https://github.com/zenithblue-oss/panvk-kbase-android/releases/ta
 - Keep the original ZIP in GitHub; do not paste large logs into chat.
 - Include device, app, test/API, driver version, and run number in the filename where practical.
 - Before uploading to this public repository, remove tokens, credentials, and unrelated personal data.
+
+
+## DXVK D3D11 smoke-test build (2026-11-09)
+
+A controlled x86_64 Windows D3D11 workload was cross-compiled by GitHub Actions from the pinned upstream `dxcube.c` source:
+
+- Source: `zenithblue-oss/panvk-kbase-android` at `cf70e02b918e1864cbcd746a7fefa57b96c673ce`
+- Actions run #3: https://github.com/kylusm/Panvk-G610-MC6/actions/runs/42638595355
+- Artifact: `panvk-dxvk-d3d11-smoke-3`, ID `13683394276`, retained until 2026-12-09
+- Executable: `dxcube-x86_64.exe`, PE32+ x86-64, 286,916 bytes
+- Executable SHA-256: `f7439fe361b5204bf8458811fbb2200ee343c32df34e288ee937eebf4fb5f11f`
+
+The workload runs for 25 seconds by default. It reports FPS and render/present/pump timing once per second, and prints `CUBE: PASS api=d3d11` when the D3D11 API path completes. This is a controlled DXVK workload, not a CTS test; the actual rendered pixels still need to be checked on the device.
+
+**Important:** this sample dynamically loads `d3d11.dll`, so PE import-based API auto-detection may not identify it. In PanPlay, set Render API explicitly to **DXVK (D3D8-11 on Vulkan)** for this test.
