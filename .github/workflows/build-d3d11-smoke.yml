@@ -2,9 +2,6 @@ name: Build PanPlay DXVK D3D11 smoke test
 
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - "build-smoke-now.txt"
 
 permissions:
   contents: read
