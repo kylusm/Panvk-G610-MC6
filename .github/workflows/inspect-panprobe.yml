@@ -2,6 +2,9 @@ name: Inspect PanProbe bundle
 
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/.panprobe-inspect-once"
 
 permissions:
   contents: read
@@ -72,8 +75,29 @@ jobs:
                       lines.append(item)
                       count += 1
           lines.append(f"\nTotal matching log lines emitted (capped per file): {count}")
+          lines.append("")
+          lines.append("=== TARGETED ANDROID WSI / GRALLOC / AHB TRACE ===")
+          trace = re.compile(
+              r"P0A-V19-FULLPLANE|cpu-linear-probe|mapper load|mapper.*failed|"
+              r"HardwareBuffer|AHardwareBuffer|dma[_ -]?buf|vk_android_probe_linear_ahb|"
+              r"vk_android_get_ahb_layout|ANativeWindow_(lock|unlockAndPost)|"
+              r"vkCreateAndroidSurfaceKHR|vkCreateSwapchainKHR|vkQueuePresentKHR",
+              re.I
+          )
+          trace_count = 0
+          for p in files:
+              if p.suffix.lower() not in (".log", ".txt", ".out", ".err"):
+                  continue
+              try:
+                  for n, line in enumerate(p.read_text(errors="replace").splitlines(), 1):
+                      if trace.search(line):
+                          lines.append(f"{p.relative_to(root)}:{n}: {line[:1200]}")
+                          trace_count += 1
+              except Exception as e:
+                  lines.append(f"{p.relative_to(root)}: [read error: {e}]")
+          lines.append(f"Total targeted WSI/AHB trace lines: {trace_count}")
           out.write_text("\n".join(lines), encoding="utf-8")
-          print(out.read_text(encoding="utf-8")[:45000])
+          print(out.read_text(encoding="utf-8")[:60000])
           PY
 
       - name: Upload inspection report
