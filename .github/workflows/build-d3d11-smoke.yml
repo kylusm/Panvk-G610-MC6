@@ -1,0 +1,88 @@
+name: Build PanPlay DXVK D3D11 smoke test
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "build-smoke-now.txt"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install MinGW cross compiler
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y gcc-mingw-w64-x86-64 binutils-mingw-w64-x86-64 file zip
+
+      - name: Fetch pinned upstream test source
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/d3d11-smoke
+          curl --fail --location --retry 3 \
+            "https://raw.githubusercontent.com/zenithblue-oss/panvk-kbase-android/cf70e02b918e1864cbcd746a7fefa57b96c673ce/apps/panvk-launcher/tests/dxcube.c" \
+            -o build/d3d11-smoke/dxcube.c
+          sha256sum build/d3d11-smoke/dxcube.c
+
+      - name: Cross-compile x86_64 Windows executable
+        shell: bash
+        run: |
+          set -euo pipefail
+          x86_64-w64-mingw32-gcc \
+            -O2 -Wall -Wextra \
+            -DWINAPI_FAMILY=WINAPI_FAMILY_DESKTOP_APP \
+            build/d3d11-smoke/dxcube.c \
+            -o build/d3d11-smoke/dxcube-x86_64.exe \
+            -luser32 -lgdi32 -lm
+          file build/d3d11-smoke/dxcube-x86_64.exe
+          x86_64-w64-mingw32-objdump -f build/d3d11-smoke/dxcube-x86_64.exe
+
+      - name: Package test and run instructions
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > build/d3d11-smoke/README.txt <<'EOF'
+          PanVK / DXVK D3D11 controlled smoke test
+
+          Binary: dxcube-x86_64.exe
+          Architecture: Windows x86_64 PE
+          Test source: zenithblue-oss/panvk-kbase-android
+          Source commit: cf70e02b918e1864cbcd746a7fefa57b96c673ce
+
+          Run from the PanPlay Wine container:
+            dxcube-x86_64.exe d3d11
+
+          Default run time: 25 seconds. The test prints CUBE: timing lines
+          with FPS plus render_ms, present_ms and pump_ms once per second.
+          A successful API run prints CUBE: PASS api=d3d11.
+
+          For the device test:
+          - Select Mesa PanVK 26.3.1 for this game in the PanPlay launch sheet.
+          - Set Render API to DXVK (D3D8-11 on Vulkan), or Auto if D3D11 is detected.
+          - Capture the moving scene during the run.
+          - Retain the PanPlay session log, including failures/crashes.
+
+          This is a controlled test workload, not a game and not a Vulkan CTS test.
+          It exercises DXVK -> Vulkan -> PanVK. Pixel correctness still needs a screenshot check.
+          EOF
+          (cd build/d3d11-smoke && zip -q ../../d3d11-smoke-x86_64.zip dxcube-x86_64.exe README.txt)
+          sha256sum d3d11-smoke-x86_64.zip > d3d11-smoke-x86_64.zip.sha256
+          mv d3d11-smoke-x86_64.zip d3d11-smoke-x86_64.zip.sha256 build/
+
+      - name: Upload D3D11 smoke-test bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: panvk-dxvk-d3d11-smoke-${{ github.run_number }}
+          path: build/d3d11-smoke-x86_64.zip
+          if-no-files-found: error
+          retention-days: 30
