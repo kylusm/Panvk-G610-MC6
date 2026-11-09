@@ -1,1 +1,1 @@
-One-shot build validation trigger. Remove after the workflow completes.
+One-shot rebuild with directly extractable artifact layout.
