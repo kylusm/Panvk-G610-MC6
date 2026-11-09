@@ -1,1 +1,1 @@
-One-shot rebuild with directly extractable artifact layout.
+One-shot rebuild: explicit DXVK instructions and portable SHA256 checksum.
