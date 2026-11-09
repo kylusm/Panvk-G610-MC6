@@ -22,7 +22,7 @@ jobs:
         run: |
           set -euo pipefail
           sudo apt-get update
-          sudo apt-get install -y gcc-mingw-w64-x86-64 binutils-mingw-w64-x86-64 file zip
+          sudo apt-get install -y gcc-mingw-w64-x86-64 binutils-mingw-w64-x86-64 file
 
       - name: Fetch pinned upstream test source
         shell: bash
@@ -75,14 +75,12 @@ jobs:
           This is a controlled test workload, not a game and not a Vulkan CTS test.
           It exercises DXVK -> Vulkan -> PanVK. Pixel correctness still needs a screenshot check.
           EOF
-          (cd build/d3d11-smoke && zip -q ../../d3d11-smoke-x86_64.zip dxcube-x86_64.exe README.txt)
-          sha256sum d3d11-smoke-x86_64.zip > d3d11-smoke-x86_64.zip.sha256
-          mv d3d11-smoke-x86_64.zip d3d11-smoke-x86_64.zip.sha256 build/
+          sha256sum build/d3d11-smoke/dxcube-x86_64.exe > build/d3d11-smoke/dxcube-x86_64.exe.sha256
 
       - name: Upload D3D11 smoke-test bundle
         uses: actions/upload-artifact@v4
         with:
           name: panvk-dxvk-d3d11-smoke-${{ github.run_number }}
-          path: build/d3d11-smoke-x86_64.zip
+          path: build/d3d11-smoke/
           if-no-files-found: error
           retention-days: 30
