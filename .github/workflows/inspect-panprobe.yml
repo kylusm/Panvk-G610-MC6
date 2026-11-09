@@ -5,6 +5,7 @@ on:
     paths:
       - "*.zip"
       - "**/*.zip"
+      - ".github/workflows/.inspect-now"
   workflow_dispatch:
     inputs:
       archive_path:
@@ -44,6 +45,11 @@ jobs:
           else
             find . -maxdepth 5 -type f -iname '*.zip' -not -path './.git/*' -printf '%p\n' |
               sed 's#^\./##' | sort | tail -n 1 > "$RUNNER_TEMP/archives.txt"
+          fi
+
+          if [ ! -s "$RUNNER_TEMP/archives.txt" ] && [ "$GITHUB_EVENT_NAME" = "push" ]; then
+            find . -maxdepth 5 -type f -iname '*.zip' -not -path './.git/*' -printf '%p\\n' |
+              sed 's#^\\./##' | sort | tail -n 1 > "$RUNNER_TEMP/archives.txt"
           fi
 
           if [ ! -s "$RUNNER_TEMP/archives.txt" ]; then
