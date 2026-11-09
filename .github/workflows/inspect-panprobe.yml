@@ -1,0 +1,84 @@
+name: Inspect PanProbe bundle
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract and summarize PanProbe ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          ZIP="panprobe-20261109-205814.zip"
+          test -f "$ZIP"
+          mkdir -p /tmp/panprobe
+          unzip -q "$ZIP" -d /tmp/panprobe
+
+          python3 <<'PY'
+          import json, pathlib, re
+          root = pathlib.Path("/tmp/panprobe")
+          out = pathlib.Path("panprobe-inspection.txt")
+          files = sorted(p for p in root.rglob("*") if p.is_file())
+          lines = []
+          lines.append("PANPROBE ARCHIVE INSPECTION")
+          lines.append(f"Files: {len(files)}")
+          lines.append("")
+          for p in files:
+              rel = p.relative_to(root)
+              lines.append(f"FILE: {rel} ({p.stat().st_size} bytes)")
+          lines.append("")
+          lines.append("=== JSON CONTENTS ===")
+          for p in files:
+              if p.suffix.lower() != ".json":
+                  continue
+              lines.append(f"\n--- {p.relative_to(root)} ---")
+              try:
+                  obj = json.loads(p.read_text(errors="replace"))
+                  s = json.dumps(obj, ensure_ascii=False, indent=2)
+              except Exception as e:
+                  s = f"[JSON parse error: {e}]"
+              lines.append(s[:30000])
+          lines.append("")
+          lines.append("=== IMPORTANT LOG LINES ===")
+          pattern = re.compile(
+              r"error|fail|warn|fallback|denied|not supported|unsupported|"
+              r"mali|kbase|csf|gralloc|swapchain|submit|mem_alloc|"
+              r"vulkan|panvk|bc_|shader|timeout",
+              re.I
+          )
+          count = 0
+          for p in files:
+              if p.suffix.lower() not in (".log", ".txt", ".out", ".err"):
+                  continue
+              matches = []
+              try:
+                  for n, line in enumerate(p.read_text(errors="replace").splitlines(), 1):
+                      if pattern.search(line):
+                          matches.append(f"{n}: {line[:1000]}")
+              except Exception as e:
+                  matches.append(f"[read error: {e}]")
+              if matches:
+                  lines.append(f"\n--- {p.relative_to(root)} ({len(matches)} matching lines) ---")
+                  for item in matches[:250]:
+                      lines.append(item)
+                      count += 1
+          lines.append(f"\nTotal matching log lines emitted (capped per file): {count}")
+          out.write_text("\n".join(lines), encoding="utf-8")
+          print(out.read_text(encoding="utf-8")[:45000])
+          PY
+
+      - name: Upload inspection report
+        uses: actions/upload-artifact@v4
+        with:
+          name: panprobe-inspection
+          path: panprobe-inspection.txt
+          retention-days: 7
