@@ -68,14 +68,14 @@ jobs:
 
           For the device test:
           - Select Mesa PanVK 26.3.1 for this game in the PanPlay launch sheet.
-          - Set Render API to DXVK (D3D8-11 on Vulkan), or Auto if D3D11 is detected.
+          - Set Render API explicitly to DXVK (D3D8-11 on Vulkan). This sample loads D3D11 dynamically, so PE import scanning may not detect its API.
           - Capture the moving scene during the run.
           - Retain the PanPlay session log, including failures/crashes.
 
           This is a controlled test workload, not a game and not a Vulkan CTS test.
           It exercises DXVK -> Vulkan -> PanVK. Pixel correctness still needs a screenshot check.
           EOF
-          sha256sum build/d3d11-smoke/dxcube-x86_64.exe > build/d3d11-smoke/dxcube-x86_64.exe.sha256
+          (cd build/d3d11-smoke && sha256sum dxcube-x86_64.exe > dxcube-x86_64.exe.sha256)
 
       - name: Upload D3D11 smoke-test bundle
         uses: actions/upload-artifact@v4
