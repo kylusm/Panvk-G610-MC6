@@ -2,9 +2,6 @@ name: Inspect PanProbe bundle
 
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - "panprobe-run-trigger.txt"
 
 permissions:
   contents: read
